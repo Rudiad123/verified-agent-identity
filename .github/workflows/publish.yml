@@ -1,7 +1,8 @@
 name: Publish to OpenClaw Hub
 
 on:
-  workflow_dispatch:
+  release:
+    types: [published]
 
 jobs:
   publish:
@@ -16,21 +17,11 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Read version from VERSION file
-        id: version
-        run: echo "VERSION=$(cat VERSION)" >> "$GITHUB_ENV"
-
-      - name: Sync version into scripts/package.json
-        run: |
-          node -e "
-            const fs = require('fs');
-            const pkg = JSON.parse(fs.readFileSync('scripts/package.json', 'utf8'));
-            pkg.version = process.env.VERSION;
-            fs.writeFileSync('scripts/package.json', JSON.stringify(pkg, null, 2) + '\n');
-          "
-
       - name: Login to OpenClaw Hub
         run: clawhub login --token ${{ secrets.CLAWHUB_TOKEN }}
 
       - name: Publish skill
-        run: clawhub sync
+        run: |
+          VERSION="${{ github.event.release.tag_name }}"
+          VERSION="${VERSION#v}"
+          clawhub skill publish . --version "$VERSION"
